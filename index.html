@@ -2,139 +2,40 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>对冲记分板</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记分板-简单版</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-        body {
-            font-family: system-ui, sans-serif;
-            background: #f0f2f5;
-            margin: 0;
-            padding: 16px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            padding: 20px;
-        }
-        h1 {
-            font-size: 1.4rem;
-            margin: 0 0 16px 0;
-            text-align: center;
-        }
-        .room-bar {
-            background: #f1f5f9;
-            border-radius: 20px;
-            padding: 12px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-        .room-bar input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 40px;
-            border: 1px solid #ccc;
-            font-size: 1rem;
-        }
-        .room-bar button {
-            padding: 10px 20px;
-            background: #1e293b;
-            color: white;
-            border: none;
-            border-radius: 40px;
-            cursor: pointer;
-        }
-        .toolbar {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-        select, button {
-            padding: 8px 16px;
-            border-radius: 40px;
-            border: 1px solid #ccc;
-            background: white;
-            cursor: pointer;
-        }
-        .total {
-            background: #e2e8f0;
-            border-radius: 40px;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            margin: 16px 0;
-        }
-        .players {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 16px;
-        }
-        .player-card {
-            background: white;
-            border-radius: 20px;
-            padding: 14px;
-            border: 1px solid #ddd;
-        }
-        .player-name {
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-        .player-card input {
-            width: 100%;
-            padding: 12px;
-            font-size: 1.2rem;
-            text-align: center;
-            border-radius: 40px;
-            border: 2px solid #ccc;
-        }
-        .note {
-            text-align: center;
-            font-size: 0.7rem;
-            color: #666;
-            margin-top: 20px;
-        }
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: 0 auto; }
+        input { font-size: 20px; padding: 8px; width: 150px; text-align: center; }
+        .player { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
+        .total { font-size: 24px; font-weight: bold; margin: 20px 0; }
+        button { padding: 8px 16px; font-size: 16px; margin: 5px; }
     </style>
 </head>
 <body>
-<div class="container">
     <h1>🎲 对冲记分板</h1>
-
-    <div class="room-bar">
-        <input type="text" id="roomInput" placeholder="房间号" value="001">
-        <button id="joinBtn">切换房间</button>
-        <span id="roomDisplay" style="background:#cbd5e1; padding:5px 12px; border-radius:40px;">001</span>
+    
+    <div>
+        房间号: <input type="text" id="roomId" value="test">
+        <button onclick="switchRoom()">切换房间</button>
+        <span id="roomShow"></span>
     </div>
-
-    <div class="toolbar">
-        <select id="countSelect">
-            <option value="2">2人</option>
-            <option value="3">3人</option>
-            <option value="4" selected>4人</option>
-            <option value="5">5人</option>
-            <option value="6">6人</option>
-            <option value="7">7人</option>
-            <option value="8">8人</option>
-        </select>
-        <button id="resetBtn">全部归零</button>
+    
+    <div>
+        <button onclick="changeCount(-1)">-人数</button>
+        <span id="countShow">4</span> 人
+        <button onclick="changeCount(1)">+人数</button>
+        <button onclick="resetAll()">全部归零</button>
     </div>
-
-    <div class="total" id="totalPanel">总分 = 0</div>
-    <div class="players" id="playersContainer"></div>
-    <div class="note">✨ 实时同步 | 直接输入数字（负数输-号）</div>
-</div>
+    
+    <div id="players"></div>
+    <div class="total" id="total">总分: 0</div>
+    <p>✨ 直接输入数字，负数先输减号，按回车保存</p>
 
 <script>
-    const firebaseConfig = {
+    const config = {
         apiKey: "AIzaSyBsAn4E14FKJutkd_b7R4R0uoiLt5dKrQo",
         authDomain: "now-time-637c1.firebaseapp.com",
         databaseURL: "https://now-time-637c1-default-rtdb.firebaseio.com",
@@ -143,182 +44,128 @@
         messagingSenderId: "563371293042",
         appId: "1:563371293042:web:c963ab777aad8a9cd145eb"
     };
-
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(config);
     const db = firebase.database();
 
-    let currentRoom = "001";
-    let playerCount = 4;
-    let isSyncing = false;
+    let room = "test";
+    let count = 4;
+    let syncing = false;
 
-    const roomInput = document.getElementById('roomInput');
-    const joinBtn = document.getElementById('joinBtn');
-    const roomDisplay = document.getElementById('roomDisplay');
-    const countSelect = document.getElementById('countSelect');
-    const resetBtn = document.getElementById('resetBtn');
-    const totalPanel = document.getElementById('totalPanel');
-    const playersContainer = document.getElementById('playersContainer');
+    function getRef() { return db.ref(`simple/${room}`); }
 
-    function getRef() {
-        return db.ref(`room2/${currentRoom}`);
+    async function save(scores) {
+        syncing = true;
+        await getRef().set({ count: count, scores: scores });
+        syncing = false;
     }
 
-    function updateURL() {
-        window.history.replaceState({}, "", `?room=${encodeURIComponent(currentRoom)}`);
-        roomDisplay.innerText = currentRoom;
-    }
-
-    async function loadData() {
-        const ref = getRef();
-        const snap = await ref.once('value');
-        let data = snap.val();
-        
-        if (data && data.playerCount) {
-            playerCount = data.playerCount;
-            countSelect.value = String(playerCount);
+    async function load() {
+        const snap = await getRef().once('value');
+        const data = snap.val();
+        if (data) {
+            if (data.count) count = data.count;
+            document.getElementById('countShow').innerText = count;
+            if (data.scores && data.scores.length === count) {
+                render(data.scores);
+            } else {
+                const scores = Array(count).fill(0);
+                render(scores);
+                save(scores);
+            }
+        } else {
+            const scores = Array(count).fill(0);
+            render(scores);
+            save(scores);
         }
-        
-        let scores = data?.scores;
-        if (!scores || scores.length !== playerCount) {
-            scores = Array(playerCount).fill(0);
-            await ref.set({ playerCount: playerCount, scores: scores });
-        }
-        
-        renderInputs(scores);
-        updateTotal(scores);
     }
 
-    function renderInputs(scores) {
-        playersContainer.innerHTML = '';
+    function render(scores) {
+        const div = document.getElementById('players');
+        div.innerHTML = '';
         for (let i = 0; i < scores.length; i++) {
-            const div = document.createElement('div');
-            div.className = 'player-card';
-            div.innerHTML = `
-                <div class="player-name">玩家 ${i+1}</div>
-                <input type="number" id="score_${i}" value="${scores[i]}" step="any">
+            div.innerHTML += `
+                <div class="player">
+                    玩家${i+1}: 
+                    <input type="number" id="inp_${i}" value="${scores[i]}" step="1" 
+                           onchange="update(${i}, this.value)">
+                </div>
             `;
-            playersContainer.appendChild(div);
-            
-            const input = document.getElementById(`score_${i}`);
-            input.addEventListener('change', (function(idx) {
-                return function(e) {
-                    if (isSyncing) return;
-                    let val = parseFloat(e.target.value);
-                    if (isNaN(val)) val = 0;
-                    updateScore(idx, val);
-                };
-            })(i));
         }
+        const total = scores.reduce((a,b)=>a+b,0);
+        document.getElementById('total').innerText = '总分: ' + total;
     }
 
-    async function updateScore(index, newVal) {
-        const ref = getRef();
-        const snap = await ref.child('scores').once('value');
-        let scores = snap.val() || Array(playerCount).fill(0);
-        scores[index] = newVal;
-        
-        isSyncing = true;
-        await ref.child('scores').set(scores);
-        isSyncing = false;
-        
-        updateTotal(scores);
+    window.update = async function(idx, val) {
+        if (syncing) return;
+        let num = parseFloat(val);
+        if (isNaN(num)) num = 0;
+        const snap = await getRef().child('scores').once('value');
+        let scores = snap.val() || Array(count).fill(0);
+        scores[idx] = num;
+        await save(scores);
+        render(scores);
     }
 
-    function updateTotal(scores) {
-        const total = scores.reduce((a, b) => a + b, 0);
-        totalPanel.innerText = `总分 = ${total}`;
+    window.resetAll = async function() {
+        const scores = Array(count).fill(0);
+        await save(scores);
+        render(scores);
     }
 
-    async function resetScores() {
-        const scores = Array(playerCount).fill(0);
-        const ref = getRef();
-        isSyncing = true;
-        await ref.child('scores').set(scores);
-        isSyncing = false;
-        renderInputs(scores);
-        updateTotal(scores);
-    }
-
-    async function changePlayerCount(newCount) {
-        if (newCount === playerCount) return;
+    window.changeCount = async function(delta) {
+        let newCount = count + delta;
+        if (newCount < 2) newCount = 2;
+        if (newCount > 8) newCount = 8;
+        if (newCount === count) return;
         
-        const ref = getRef();
-        const snap = await ref.child('scores').once('value');
-        let oldScores = snap.val() || [];
-        
+        const snap = await getRef().child('scores').once('value');
+        let old = snap.val() || [];
         let newScores;
-        if (newCount > oldScores.length) {
-            newScores = [...oldScores];
+        if (newCount > old.length) {
+            newScores = [...old];
             while (newScores.length < newCount) newScores.push(0);
         } else {
-            newScores = oldScores.slice(0, newCount);
+            newScores = old.slice(0, newCount);
         }
-        
-        playerCount = newCount;
-        isSyncing = true;
-        await ref.update({ playerCount: playerCount, scores: newScores });
-        isSyncing = false;
-        
-        renderInputs(newScores);
-        updateTotal(newScores);
+        count = newCount;
+        document.getElementById('countShow').innerText = count;
+        await getRef().set({ count: count, scores: newScores });
+        render(newScores);
     }
 
-    function startRealtime() {
-        const ref = getRef();
-        ref.on('value', (snap) => {
-            if (isSyncing) return;
+    window.switchRoom = async function() {
+        let newRoom = document.getElementById('roomId').value.trim();
+        if (!newRoom) return;
+        room = newRoom;
+        document.getElementById('roomShow').innerText = room;
+        window.history.replaceState({}, "", `?room=${room}`);
+        await load();
+        // 重新绑定监听
+        getRef().off();
+        getRef().on('value', (snap) => {
+            if (syncing) return;
             const data = snap.val();
-            if (data && data.scores) {
-                if (data.playerCount && data.playerCount !== playerCount) {
-                    playerCount = data.playerCount;
-                    countSelect.value = String(playerCount);
-                }
-                if (data.scores.length === playerCount) {
-                    renderInputs(data.scores);
-                    updateTotal(data.scores);
-                }
+            if (data && data.scores && data.scores.length === count) {
+                render(data.scores);
             }
         });
     }
-    
-    // 0.5秒轮询保底
-    setInterval(async () => {
-        const ref = getRef();
-        const snap = await ref.once('value');
-        const data = snap.val();
-        if (data && data.scores && !isSyncing) {
-            for (let i = 0; i < data.scores.length; i++) {
-                const inp = document.getElementById(`score_${i}`);
-                if (inp && parseFloat(inp.value) !== data.scores[i]) {
-                    inp.value = data.scores[i];
-                }
-            }
-            updateTotal(data.scores);
-        }
-    }, 500);
-
-    function switchRoom() {
-        let newRoom = roomInput.value.trim();
-        if (!newRoom) return;
-        currentRoom = newRoom;
-        updateURL();
-        loadData();
-        // 重新绑定监听
-        db.ref(`room2/${currentRoom}`).off();
-        startRealtime();
-    }
-
-    joinBtn.addEventListener('click', switchRoom);
-    countSelect.addEventListener('change', (e) => changePlayerCount(parseInt(e.target.value)));
-    resetBtn.addEventListener('click', resetScores);
 
     const urlRoom = new URLSearchParams(window.location.search).get('room');
     if (urlRoom) {
-        currentRoom = urlRoom;
-        roomInput.value = currentRoom;
+        room = urlRoom;
+        document.getElementById('roomId').value = room;
     }
-    updateURL();
-    loadData().then(() => startRealtime());
+    document.getElementById('roomShow').innerText = room;
+    load().then(() => {
+        getRef().on('value', (snap) => {
+            if (syncing) return;
+            const data = snap.val();
+            if (data && data.scores && data.scores.length === count) {
+                render(data.scores);
+            }
+        });
+    });
 </script>
 </body>
 </html>
