@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>多人对冲记分板 - 实时同步</title>
-    <!-- Firebase SDK -->
+    <title>多人对冲记分板 - 可自定义总分+房间号</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         * {
             box-sizing: border-box;
-            user-select: none;
         }
         body {
             font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
@@ -29,40 +27,71 @@
             border-radius: 32px;
             box-shadow: 0 20px 35px -10px rgba(0,0,0,0.1);
             padding: 20px 24px 32px;
-            transition: all 0.2s;
         }
         h1 {
-            font-size: 1.8rem;
-            margin: 0 0 6px 0;
+            font-size: 1.6rem;
+            margin: 0 0 16px 0;
             color: #1e293b;
+        }
+        .room-section {
+            background: #f1f5f9;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .room-section input {
+            flex: 2;
+            min-width: 150px;
+            padding: 10px 16px;
+            font-size: 1rem;
+            border-radius: 60px;
+            border: 1px solid #cbd5e1;
+            font-family: monospace;
+        }
+        .room-section button {
+            padding: 10px 20px;
+            background: #1e293b;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+        }
+        .target-section {
+            background: #e6f0ff;
+            border-radius: 24px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .target-control {
             display: flex;
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
         }
-        .room-badge {
-            background: #e2e8f0;
-            font-size: 0.8rem;
-            padding: 6px 12px;
+        .target-control input {
+            width: 100px;
+            padding: 8px 12px;
+            font-size: 1.1rem;
+            text-align: center;
             border-radius: 40px;
-            font-weight: normal;
-            font-family: monospace;
-            word-break: break-all;
+            border: 1px solid #3b82f6;
+            font-weight: bold;
         }
         .toolbar {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            margin: 20px 0 16px;
+            margin-bottom: 16px;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 16px;
-        }
-        .controls {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
             align-items: center;
         }
         select, button {
@@ -72,24 +101,6 @@
             border: 1px solid #cbd5e1;
             background: white;
             cursor: pointer;
-            font-weight: 500;
-            transition: 0.1s linear;
-        }
-        button {
-            background: #f8fafc;
-        }
-        button:active {
-            transform: scale(0.96);
-        }
-        .btn-danger {
-            background: #fee2e2;
-            border-color: #fecaca;
-            color: #b91c1c;
-        }
-        .btn-primary {
-            background: #1e293b;
-            border-color: #0f172a;
-            color: white;
         }
         .total-area {
             background: #f1f5f9;
@@ -119,23 +130,14 @@
             padding: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             border: 1px solid #e2edff;
-            transition: 0.1s;
         }
         .player-name {
             font-weight: 700;
             font-size: 1.2rem;
             margin-bottom: 12px;
             color: #0f172a;
-            display: flex;
-            justify-content: space-between;
         }
-        .player-score {
-            font-size: 2rem;
-            font-weight: 800;
-            margin: 8px 0;
-            font-family: monospace;
-        }
-        input {
+        input.score-input {
             width: 100%;
             padding: 12px 16px;
             font-size: 1.2rem;
@@ -143,33 +145,38 @@
             border: 2px solid #cbd5e1;
             text-align: center;
             font-weight: 600;
-            font-family: monospace;
-        }
-        input:focus {
-            outline: none;
-            border-color: #3b82f6;
         }
         .sync-note {
             font-size: 0.7rem;
             color: #475569;
             margin-top: 20px;
             text-align: center;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 16px;
-        }
-        @media (max-width: 640px) {
-            .container { padding: 16px; }
-            .player-name { font-size: 1rem; }
         }
     </style>
 </head>
 <body>
 <div class="container" id="app">
-    <h1>🎲 对冲记分板 
-        <span class="room-badge" id="roomLabel">加载中...</span>
-    </h1>
+    <h1>🎲 对冲记分板（自定义总分+自由房间）</h1>
+
+    <!-- 房间控制区 -->
+    <div class="room-section">
+        <span>🏠 房间号：</span>
+        <input type="text" id="roomInput" placeholder="例如: 001, 002, test">
+        <button id="joinRoomBtn">🔁 加入/切换房间</button>
+        <span id="currentRoomDisplay" style="font-size:0.85rem; background:#e2e8f0; padding:6px 12px; border-radius:40px;"></span>
+    </div>
+
+    <!-- 自定义总分控制区 -->
+    <div class="target-section">
+        <span>🎯 目标总分（必须等于）</span>
+        <div class="target-control">
+            <input type="number" id="targetTotalInput" step="1" value="0">
+            <button id="setTargetBtn">✅ 设置目标总分</button>
+        </div>
+    </div>
+
     <div class="toolbar">
-        <div class="controls">
+        <div>
             <select id="playerCountSelect">
                 <option value="2">2 人对局</option>
                 <option value="3">3 人对局</option>
@@ -180,281 +187,225 @@
                 <option value="8">8 人对局</option>
             </select>
             <button id="resetScoresBtn">🔄 一键清空分数</button>
-            <button id="changeRoomBtn">🔁 切换房间</button>
         </div>
     </div>
-    <div id="totalPanel" class="total-area">⚖️ 总分校验中...</div>
+
+    <div id="totalPanel" class="total-area">⚖️ 校验中...</div>
     <div id="playersContainer" class="players-grid"></div>
     <div class="sync-note">
-        ✨ 实时同步 (0.5秒自动刷新) | 房间内所有人分数同步 | 总和必须为0
+        ✨ 实时同步 (0.5秒自动刷新) | 房间内所有人共享同一目标总分
     </div>
 </div>
 
 <script>
-    // ----------------------------- 🔥 在这里替换成你的 Firebase 配置 🔥 -----------------------------
+    // ==================== Firebase 配置（用你的） ====================
     const firebaseConfig = {
-apiKey: "AIzaSyBsAn4E14FKJutkd_b7R4R0uoiLt5dKrQo",
-authDomain: "now-time-637c1.firebaseapp.com",
-projectId: "now-time-637c1",
-storageBucket: "now-time-637c1.firebasestorage.app",
-messagingSenderId: "563371293042",
-appId: "1:563371293042:web:c963ab777aad8a9cd145eb"
+        apiKey: "AIzaSyBsAn4E14FKJutkd_b7R4R0uoiLt5dKrQo",
+        authDomain: "now-time-637c1.firebaseapp.com",
+        databaseURL: "https://now-time-637c1-default-rtdb.firebaseio.com",
+        projectId: "now-time-637c1",
+        storageBucket: "now-time-637c1.firebasestorage.app",
+        messagingSenderId: "563371293042",
+        appId: "1:563371293042:web:c963ab777aad8a9cd145eb"
     };
-    // --------------------------------------------------------------------------------------------
+    // ================================================================
 
-    // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // 获取房间号 (从 URL 参数 room=xxx)
-    function getRoomId() {
-        const params = new URLSearchParams(window.location.search);
-        let room = params.get('room');
-        if (!room || room.trim() === "") {
-            room = "default_room";
-        }
-        // 安全字符处理
-        return room.replace(/[.#$[\]]/g, '_');
-    }
+    let currentRoom = "001";
+    let currentPlayerCount = 4;
+    let targetTotal = 0;
+    let isUpdatingFromRemote = false;
 
-    let currentRoom = getRoomId();
-    let currentPlayerCount = 4;      // 默认4人
-    let isUpdatingFromRemote = false; // 防止循环触发
-    let timeoutId = null;
-
-    // DOM 元素
+    const roomInput = document.getElementById('roomInput');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const currentRoomDisplay = document.getElementById('currentRoomDisplay');
+    const targetTotalInput = document.getElementById('targetTotalInput');
+    const setTargetBtn = document.getElementById('setTargetBtn');
     const playerCountSelect = document.getElementById('playerCountSelect');
     const resetBtn = document.getElementById('resetScoresBtn');
-    const changeRoomBtn = document.getElementById('changeRoomBtn');
     const playersContainer = document.getElementById('playersContainer');
     const totalPanel = document.getElementById('totalPanel');
-    const roomLabel = document.getElementById('roomLabel');
 
-    roomLabel.innerText = `房间: ${currentRoom}`;
+    function getRoomRef() {
+        return database.ref(`scores_v2/${currentRoom}`);
+    }
 
-    // 更新房间标题
     function updateRoomDisplay() {
-        roomLabel.innerText = `房间: ${currentRoom}`;
+        currentRoomDisplay.innerText = `当前房间: ${currentRoom}`;
         window.history.replaceState({}, "", `?room=${encodeURIComponent(currentRoom)}`);
     }
 
-    // 获取当前房间的数据库引用
-    function getRoomRef() {
-        return database.ref(`scores/${currentRoom}`);
-    }
-
-    // 监听远程数据变化 (0.5秒内自动同步, 但实际FB实时推送 < 200ms)
-    function setupRealtimeListener() {
+    async function initOrLoadRoom() {
         const roomRef = getRoomRef();
-        roomRef.off(); // 移除旧监听
-        roomRef.on('value', (snapshot) => {
-            if (isUpdatingFromRemote) return;
-            const data = snapshot.val();
-            if (data && data.scores && data.playerCount) {
-                // 远端数据与当前人数不一致时，需要同步UI人数
-                if (data.playerCount !== currentPlayerCount) {
-                    currentPlayerCount = data.playerCount;
-                    playerCountSelect.value = String(currentPlayerCount);
-                    renderScoreInputs(data.scores);
-                } else {
-                    renderScoreInputs(data.scores);
-                }
-                validateTotal();
-            } else if (data && data.scores === undefined) {
-                // 初始化房间数据
-                initRoomData();
+        const snapshot = await roomRef.once('value');
+        let data = snapshot.val();
+        if (!data) {
+            // 初始化房间数据
+            const defaultScores = Array(currentPlayerCount).fill(0);
+            await roomRef.set({
+                playerCount: currentPlayerCount,
+                targetTotal: 0,
+                scores: defaultScores
+            });
+            targetTotal = 0;
+            targetTotalInput.value = 0;
+        } else {
+            if (data.playerCount) currentPlayerCount = data.playerCount;
+            if (data.targetTotal !== undefined) targetTotal = data.targetTotal;
+            targetTotalInput.value = targetTotal;
+            playerCountSelect.value = String(currentPlayerCount);
+            if (data.scores && data.scores.length === currentPlayerCount) {
+                renderScoreInputs(data.scores);
+            } else {
+                await roomRef.child('scores').set(Array(currentPlayerCount).fill(0));
+                renderScoreInputs(Array(currentPlayerCount).fill(0));
             }
-        });
+        }
+        validateTotal();
     }
 
-    // 初始化房间默认数据 (全部为0)
-    async function initRoomData() {
-        const defaultScores = Array(currentPlayerCount).fill(0);
-        const roomRef = getRoomRef();
-        await roomRef.set({
-            playerCount: currentPlayerCount,
-            scores: defaultScores,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-
-    // 渲染分数输入框
     function renderScoreInputs(scoresArray) {
         if (!scoresArray || scoresArray.length !== currentPlayerCount) return;
         playersContainer.innerHTML = '';
         for (let i = 0; i < currentPlayerCount; i++) {
-            const val = scoresArray[i];
             const card = document.createElement('div');
             card.className = 'player-card';
             card.innerHTML = `
-                <div class="player-name">
-                    <span>👤 玩家 ${i+1}</span>
-                </div>
-                <div class="player-score">
-                    <input type="number" id="score_${i}" value="${val}" step="1" placeholder="分数" autocomplete="off">
-                </div>
+                <div class="player-name">👤 玩家 ${i+1}</div>
+                <input type="number" id="score_${i}" class="score-input" value="${scoresArray[i]}" step="1">
             `;
             playersContainer.appendChild(card);
             const inputElem = document.getElementById(`score_${i}`);
-            // 绑定输入事件
-            inputElem.addEventListener('change', (function(index) {
-                return function(e) {
-                    if (isUpdatingFromRemote) return;
-                    let newVal = parseFloat(e.target.value);
-                    if (isNaN(newVal)) newVal = 0;
-                    // 非法数值修正
-                    e.target.value = newVal;
-                    updateSingleScore(index, newVal);
-                };
+            inputElem.addEventListener('change', ((index) => (e) => {
+                if (isUpdatingFromRemote) return;
+                let newVal = parseFloat(e.target.value);
+                if (isNaN(newVal)) newVal = 0;
+                updateSingleScore(index, newVal);
             })(i));
         }
     }
 
-    // 更新单个分数到 Firebase
     async function updateSingleScore(playerIndex, newScore) {
         const roomRef = getRoomRef();
-        try {
-            const snapshot = await roomRef.child('scores').once('value');
-            let currentScores = snapshot.val() || Array(currentPlayerCount).fill(0);
-            if (currentScores.length !== currentPlayerCount) {
-                currentScores = Array(currentPlayerCount).fill(0);
-            }
-            currentScores[playerIndex] = newScore;
-            // 检查总和是否为0
-            const total = currentScores.reduce((a,b) => a + b, 0);
-            if (total !== 0) {
-                // 显示非法提示但不保存 (还原原值)
-                showTotalErrorToast(total);
-                // 将输入框还原成旧值
-                const oldVal = currentScores[playerIndex];
-                const inputBox = document.getElementById(`score_${playerIndex}`);
-                if (inputBox) inputBox.value = oldVal;
-                return;
-            }
-            isUpdatingFromRemote = true;
-            await roomRef.update({
-                scores: currentScores,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            });
-            isUpdatingFromRemote = false;
-            validateTotal();
-        } catch (err) {
-            console.warn(err);
-            isUpdatingFromRemote = false;
+        const snap = await roomRef.child('scores').once('value');
+        let scores = snap.val() || Array(currentPlayerCount).fill(0);
+        if (scores.length !== currentPlayerCount) scores = Array(currentPlayerCount).fill(0);
+        const oldVal = scores[playerIndex];
+        scores[playerIndex] = newScore;
+        const total = scores.reduce((a,b) => a+b, 0);
+        if (total !== targetTotal) {
+            totalPanel.innerText = `❌ 总和 ${total} ≠ 目标 ${targetTotal}，已拒绝更改 ❌`;
+            totalPanel.className = "total-area total-invalid";
+            document.getElementById(`score_${playerIndex}`).value = oldVal;
+            setTimeout(() => validateTotal(), 1500);
+            return;
         }
+        isUpdatingFromRemote = true;
+        await roomRef.child('scores').set(scores);
+        isUpdatingFromRemote = false;
+        validateTotal();
     }
 
-    // 一键清空所有分数为0
     async function resetAllScores() {
         const zeroScores = Array(currentPlayerCount).fill(0);
         const roomRef = getRoomRef();
-        try {
-            isUpdatingFromRemote = true;
-            await roomRef.update({
-                scores: zeroScores,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            });
-            isUpdatingFromRemote = false;
-            validateTotal();
-        } catch(e) {
-            isUpdatingFromRemote = false;
-            alert("清空失败，请检查网络");
-        }
+        isUpdatingFromRemote = true;
+        await roomRef.child('scores').set(zeroScores);
+        isUpdatingFromRemote = false;
+        validateTotal();
     }
 
-    // 校验总分 & 显示UI提示
-    async function validateTotal() {
-        const roomRef = getRoomRef();
-        const snapshot = await roomRef.child('scores').once('value');
-        let scores = snapshot.val();
-        if (!scores || scores.length !== currentPlayerCount) return;
-        const total = scores.reduce((s,v) => s + v, 0);
-        if (total === 0) {
-            totalPanel.innerText = `✅ 总分 = 0 ｜ 对冲平衡，合法`;
-            totalPanel.className = "total-area total-valid";
-        } else {
-            totalPanel.innerText = `⚠️ 总分 = ${total} ｜ 必须等于 0 ，请调整分数 ⚠️`;
-            totalPanel.className = "total-area total-invalid";
-        }
-    }
-
-    function showTotalErrorToast(currentTotal) {
-        totalPanel.innerText = `❌ 非法操作！当前总分 ${currentTotal}，必须为 0，已拒绝更改 ❌`;
-        totalPanel.className = "total-area total-invalid";
-        setTimeout(() => {
-            validateTotal(); // 恢复真实总分提示
-        }, 1200);
-    }
-
-    // 改变玩家数量
     async function changePlayerCount(newCount) {
         if (newCount === currentPlayerCount) return;
         currentPlayerCount = newCount;
         const newScores = Array(currentPlayerCount).fill(0);
         const roomRef = getRoomRef();
         isUpdatingFromRemote = true;
-        await roomRef.set({
-            playerCount: currentPlayerCount,
-            scores: newScores,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP
-        });
+        await roomRef.update({ playerCount: currentPlayerCount, scores: newScores });
         isUpdatingFromRemote = false;
         renderScoreInputs(newScores);
         validateTotal();
     }
 
-    // 切换房间功能 (弹出提示框)
-    function switchRoom() {
-        let newRoom = prompt("输入新的房间号（英文数字组合）", currentRoom);
-        if (newRoom && newRoom.trim() !== "") {
-            newRoom = newRoom.replace(/[.#$[\]]/g, '_');
-            if (newRoom === currentRoom) return;
-            currentRoom = newRoom;
-            updateRoomDisplay();
-            // 重新初始化监听
-            setupRealtimeListener();
-            // 重新拉取该房间人数以及分数
-            const roomRef = getRoomRef();
-            roomRef.child('playerCount').once('value').then(snap => {
-                let existCount = snap.val();
-                if (existCount && typeof existCount === 'number') {
-                    currentPlayerCount = existCount;
-                    playerCountSelect.value = String(currentPlayerCount);
-                    roomRef.child('scores').once('value').then(scoreSnap => {
-                        let scoresArr = scoreSnap.val();
-                        if (scoresArr && scoresArr.length === currentPlayerCount) {
-                            renderScoreInputs(scoresArr);
-                        } else {
-                            initRoomData();
-                        }
-                        validateTotal();
-                    });
-                } else {
-                    // 新房间无数据则初始化
-                    initRoomData().then(() => {
-                        renderScoreInputs(Array(currentPlayerCount).fill(0));
-                        validateTotal();
-                    });
-                }
-            });
+    async function setTargetTotal(newTarget) {
+        targetTotal = newTarget;
+        const roomRef = getRoomRef();
+        await roomRef.child('targetTotal').set(targetTotal);
+        // 修改目标后，检查当前总分是否合法
+        const snap = await roomRef.child('scores').once('value');
+        let scores = snap.val() || Array(currentPlayerCount).fill(0);
+        const total = scores.reduce((a,b) => a+b, 0);
+        if (total !== targetTotal) {
+            totalPanel.innerText = `⚠️ 当前总分 ${total}，目标已改为 ${targetTotal}，请调整分数 ⚠️`;
+            totalPanel.className = "total-area total-invalid";
+        } else {
+            validateTotal();
         }
     }
 
-    // 0.5秒额外保险轮询 + 实时推送已经足够，但为了绝对0.5秒刷新显示（可选），增加轮询
-    function startHalfSecondPoll() {
-        if (timeoutId) clearInterval(timeoutId);
-        timeoutId = setInterval(async () => {
-            // 只做显示刷新：拉取最新scores并更新输入框（如果数据变了）
+    async function validateTotal() {
+        const roomRef = getRoomRef();
+        const snap = await roomRef.once('value');
+        const data = snap.val();
+        if (!data || !data.scores) return;
+        const total = data.scores.reduce((a,b) => a+b, 0);
+        const target = data.targetTotal !== undefined ? data.targetTotal : 0;
+        if (total === target) {
+            totalPanel.innerText = `✅ 总分 = ${total} ｜ 等于目标值 ${target} ✅`;
+            totalPanel.className = "total-area total-valid";
+        } else {
+            totalPanel.innerText = `⚠️ 总分 = ${total} ｜ 目标 = ${target} ｜ 请调整分数 ⚠️`;
+            totalPanel.className = "total-area total-invalid";
+        }
+    }
+
+    function setupRealtimeListener() {
+        const roomRef = getRoomRef();
+        roomRef.off();
+        roomRef.on('value', (snapshot) => {
+            if (isUpdatingFromRemote) return;
+            const data = snapshot.val();
+            if (data) {
+                if (data.playerCount && data.playerCount !== currentPlayerCount) {
+                    currentPlayerCount = data.playerCount;
+                    playerCountSelect.value = String(currentPlayerCount);
+                }
+                if (data.targetTotal !== undefined) {
+                    targetTotal = data.targetTotal;
+                    targetTotalInput.value = targetTotal;
+                }
+                if (data.scores && data.scores.length === currentPlayerCount) {
+                    renderScoreInputs(data.scores);
+                }
+                validateTotal();
+            }
+        });
+    }
+
+    function switchToRoom(newRoom) {
+        if (!newRoom || newRoom.trim() === "") return;
+        currentRoom = newRoom.trim();
+        updateRoomDisplay();
+        roomInput.value = currentRoom;
+        setupRealtimeListener();
+        initOrLoadRoom();
+    }
+
+    // 0.5秒额外轮询，保证显示刷新
+    let intervalId;
+    function startPolling() {
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(async () => {
             const roomRef = getRoomRef();
-            const snap = await roomRef.child('scores').once('value');
-            let latestScores = snap.val();
-            if (latestScores && latestScores.length === currentPlayerCount) {
-                for (let i = 0; i < currentPlayerCount; i++) {
-                    const inputEl = document.getElementById(`score_${i}`);
-                    if (inputEl && parseFloat(inputEl.value) !== latestScores[i]) {
-                        if (!isUpdatingFromRemote) {
-                            inputEl.value = latestScores[i];
-                        }
+            const snap = await roomRef.once('value');
+            const data = snap.val();
+            if (data && data.scores) {
+                for (let i=0; i<data.scores.length; i++) {
+                    const inp = document.getElementById(`score_${i}`);
+                    if (inp && parseFloat(inp.value) !== data.scores[i] && !isUpdatingFromRemote) {
+                        inp.value = data.scores[i];
                     }
                 }
                 validateTotal();
@@ -462,47 +413,32 @@ appId: "1:563371293042:web:c963ab777aad8a9cd145eb"
         }, 500);
     }
 
-    // 监听人数下拉改变
+    // 事件绑定
+    joinRoomBtn.addEventListener('click', () => {
+        switchToRoom(roomInput.value);
+    });
+    setTargetBtn.addEventListener('click', async () => {
+        let newTarget = parseFloat(targetTotalInput.value);
+        if (isNaN(newTarget)) newTarget = 0;
+        await setTargetTotal(newTarget);
+    });
     playerCountSelect.addEventListener('change', (e) => {
-        const newCount = parseInt(e.target.value, 10);
-        if (newCount !== currentPlayerCount) {
-            changePlayerCount(newCount);
-        }
+        changePlayerCount(parseInt(e.target.value));
     });
+    resetBtn.addEventListener('click', resetAllScores);
 
-    resetBtn.addEventListener('click', () => {
-        resetAllScores();
-    });
+    // 从 URL 读取初始房间
+    const urlParams = new URLSearchParams(window.location.search);
+    let initRoom = urlParams.get('room');
+    if (!initRoom) initRoom = "001";
+    currentRoom = initRoom;
+    roomInput.value = currentRoom;
+    updateRoomDisplay();
 
-    changeRoomBtn.addEventListener('click', () => {
-        switchRoom();
-    });
-
-    // 初始化全部
-    async function init() {
-        const roomRef = getRoomRef();
-        const snapshot = await roomRef.child('playerCount').once('value');
-        const storedCount = snapshot.val();
-        if (storedCount && typeof storedCount === 'number' && storedCount >= 2 && storedCount <= 8) {
-            currentPlayerCount = storedCount;
-            playerCountSelect.value = String(currentPlayerCount);
-        } else {
-            await initRoomData();
-        }
-        // 拉取分数并渲染
-        const scoreSnapshot = await roomRef.child('scores').once('value');
-        let scoresData = scoreSnapshot.val();
-        if (!scoresData || scoresData.length !== currentPlayerCount) {
-            scoresData = Array(currentPlayerCount).fill(0);
-            await roomRef.child('scores').set(scoresData);
-        }
-        renderScoreInputs(scoresData);
-        validateTotal();
+    initOrLoadRoom().then(() => {
         setupRealtimeListener();
-        startHalfSecondPoll();
-    }
-
-    init();
+        startPolling();
+    });
 </script>
 </body>
 </html>
