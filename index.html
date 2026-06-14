@@ -2,19 +2,20 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>多人对冲记分板 - 自由记分</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>多人对冲记分板 - 手机电脑通用</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
-            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
             background: #f0f2f5;
             margin: 0;
-            padding: 20px;
+            padding: 12px;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -24,133 +25,154 @@
             max-width: 1200px;
             width: 100%;
             background: white;
-            border-radius: 32px;
-            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.1);
-            padding: 20px 24px 32px;
+            border-radius: 28px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            padding: 16px 20px 28px;
         }
         h1 {
-            font-size: 1.6rem;
-            margin: 0 0 16px 0;
+            font-size: 1.4rem;
+            margin: 0 0 12px 0;
             color: #1e293b;
+            text-align: center;
         }
         .room-section {
             background: #f1f5f9;
-            border-radius: 24px;
-            padding: 16px;
-            margin-bottom: 20px;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
+        }
+        .room-section span {
+            font-size: 0.9rem;
+            font-weight: 500;
         }
         .room-section input {
             flex: 2;
-            min-width: 150px;
-            padding: 10px 16px;
-            font-size: 1rem;
-            border-radius: 60px;
+            min-width: 120px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            border-radius: 40px;
             border: 1px solid #cbd5e1;
             font-family: monospace;
+            background: white;
         }
         .room-section button {
-            padding: 10px 20px;
+            padding: 10px 18px;
             background: #1e293b;
             color: white;
             border: none;
-            border-radius: 60px;
+            border-radius: 40px;
             cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
         .toolbar {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 16px;
             justify-content: space-between;
             align-items: center;
         }
         select, button {
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            border-radius: 60px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            border-radius: 40px;
             border: 1px solid #cbd5e1;
             background: white;
             cursor: pointer;
         }
         .total-area {
             background: #f1f5f9;
-            border-radius: 48px;
-            padding: 10px 20px;
+            border-radius: 40px;
+            padding: 10px 16px;
             text-align: center;
-            font-weight: bold;
-            margin: 16px 0 20px;
-            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 12px 0 18px;
+            font-size: 1rem;
         }
         .players-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
             margin-top: 8px;
         }
         .player-card {
             background: #ffffff;
-            border-radius: 28px;
-            padding: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 24px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             border: 1px solid #e2edff;
         }
         .player-name {
-            font-weight: 700;
-            font-size: 1.2rem;
-            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 10px;
             color: #0f172a;
         }
         input.score-input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 14px 12px;
             font-size: 1.2rem;
-            border-radius: 60px;
+            border-radius: 50px;
             border: 2px solid #cbd5e1;
             text-align: center;
             font-weight: 600;
+            background: white;
+            font-family: monospace;
+        }
+        input.score-input:focus {
+            outline: none;
+            border-color: #3b82f6;
         }
         .sync-note {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #475569;
-            margin-top: 20px;
+            margin-top: 18px;
             text-align: center;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        @media (max-width: 600px) {
+            .container { padding: 12px 16px 20px; }
+            h1 { font-size: 1.2rem; }
+            .player-name { font-size: 0.9rem; }
+            input.score-input { padding: 12px 10px; font-size: 1rem; }
         }
     </style>
 </head>
 <body>
-<div class="container" id="app">
-    <h1>🎲 对冲记分板（自由记分 · 总和仅供参考）</h1>
+<div class="container">
+    <h1>🎲 对冲记分板</h1>
 
     <div class="room-section">
-        <span>🏠 房间号：</span>
-        <input type="text" id="roomInput" placeholder="例如: 001, 002, test" value="001">
-        <button id="joinRoomBtn">🔁 加入/切换房间</button>
-        <span id="currentRoomDisplay" style="font-size:0.85rem; background:#e2e8f0; padding:6px 12px; border-radius:40px;"></span>
+        <span>🏠 房间号</span>
+        <input type="text" id="roomInput" placeholder="例如: 001" value="001" autocomplete="off">
+        <button id="joinRoomBtn">加入/切换</button>
+        <span id="currentRoomDisplay" style="font-size:0.75rem; background:#e2e8f0; padding:5px 12px; border-radius:30px;"></span>
     </div>
 
     <div class="toolbar">
-        <div>
-            <select id="playerCountSelect">
-                <option value="2">2 人对局</option>
-                <option value="3">3 人对局</option>
-                <option value="4" selected>4 人对局</option>
-                <option value="5">5 人对局</option>
-                <option value="6">6 人对局</option>
-                <option value="7">7 人对局</option>
-                <option value="8">8 人对局</option>
-            </select>
-            <button id="resetScoresBtn">🔄 一键清空分数</button>
-        </div>
+        <select id="playerCountSelect">
+            <option value="2">2人</option>
+            <option value="3">3人</option>
+            <option value="4" selected>4人</option>
+            <option value="5">5人</option>
+            <option value="6">6人</option>
+            <option value="7">7人</option>
+            <option value="8">8人</option>
+        </select>
+        <button id="resetScoresBtn">🔄 一键归零</button>
     </div>
 
-    <div id="totalPanel" class="total-area">⚖️ 计算总分中...</div>
+    <div id="totalPanel" class="total-area">📊 总分 = 0</div>
     <div id="playersContainer" class="players-grid"></div>
     <div class="sync-note">
-        ✨ 实时同步 (0.5秒自动刷新) | 分数自由填写，总和仅供参考（对错自己看）
+        ✨ 实时同步 | 分数随意填（正数/负数）| 总和仅供参考
     </div>
 </div>
 
@@ -181,19 +203,19 @@
     const totalPanel = document.getElementById('totalPanel');
 
     function getRoomRef() {
-        return database.ref(`scores_v5/${currentRoom}`);
+        return database.ref(`scores_final/${currentRoom}`);
     }
 
     function updateRoomDisplay() {
-        currentRoomDisplay.innerText = `当前房间: ${currentRoom}`;
-        window.history.replaceState({}, "", `?room=${encodeURIComponent(currentRoom)}`);
+        currentRoomDisplay.innerText = currentRoom;
+        let newUrl = window.location.pathname + `?room=${encodeURIComponent(currentRoom)}`;
+        window.history.replaceState({}, "", newUrl);
     }
 
-    // 将输入字符串转换为有效数字（允许负数）
     function parseScore(value) {
         if (value === undefined || value === null || value === '') return 0;
         let cleaned = value.toString().trim();
-        if (cleaned === '') return 0;
+        if (cleaned === '' || cleaned === '-') return 0;
         let num = parseFloat(cleaned);
         return isNaN(num) ? 0 : num;
     }
@@ -215,7 +237,7 @@
             }
             if (data.scores && data.scores.length === currentPlayerCount) {
                 renderScoreInputs(data.scores);
-            } else if (data.scores && data.scores.length !== currentPlayerCount) {
+            } else if (data.scores) {
                 let adjustedScores = [...data.scores];
                 if (adjustedScores.length < currentPlayerCount) {
                     while (adjustedScores.length < currentPlayerCount) adjustedScores.push(0);
@@ -241,35 +263,33 @@
             card.className = 'player-card';
             card.innerHTML = `
                 <div class="player-name">👤 玩家 ${i+1}</div>
-                <input type="text" id="score_${i}" class="score-input" value="${scoresArray[i]}" inputmode="numeric" placeholder="正数/负数">
+                <input type="text" id="score_${i}" class="score-input" value="${scoresArray[i]}" inputmode="numeric" autocomplete="off">
             `;
             playersContainer.appendChild(card);
             const inputElem = document.getElementById(`score_${i}`);
             
-            // 失去焦点时保存
-            inputElem.addEventListener('blur', ((index) => (e) => {
-                if (isUpdatingFromRemote) return;
-                let newVal = parseScore(e.target.value);
-                if (newVal !== parseScore(scoresArray[index])) {
-                    updateSingleScore(index, newVal);
-                } else {
-                    // 格式化为标准显示
-                    e.target.value = newVal;
-                }
-            })(i));
-            
-            // 回车保存
-            inputElem.addEventListener('keypress', ((index) => (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
+            // 失去焦点保存
+            inputElem.addEventListener('blur', (function(idx) {
+                return async function(e) {
+                    if (isUpdatingFromRemote) return;
                     let newVal = parseScore(e.target.value);
-                    if (newVal !== parseScore(scoresArray[index])) {
-                        updateSingleScore(index, newVal);
+                    let oldVal = scoresArray[idx];
+                    if (newVal !== oldVal) {
+                        await updateSingleScore(idx, newVal);
                     } else {
                         e.target.value = newVal;
                     }
-                    e.target.blur();
-                }
+                };
+            })(i));
+            
+            // 回车保存
+            inputElem.addEventListener('keypress', (function(idx) {
+                return function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.target.blur();
+                    }
+                };
             })(i));
         }
     }
@@ -286,12 +306,6 @@
         await roomRef.child('scores').set(scores);
         isUpdatingFromRemote = false;
         updateTotalDisplay();
-        
-        // 更新输入框显示
-        const inputElem = document.getElementById(`score_${playerIndex}`);
-        if (inputElem && parseFloat(inputElem.value) !== newScore) {
-            inputElem.value = newScore;
-        }
     }
 
     async function resetAllScores() {
@@ -301,7 +315,6 @@
         await roomRef.child('scores').set(zeroScores);
         isUpdatingFromRemote = false;
         updateTotalDisplay();
-        // 刷新输入框显示
         for (let i = 0; i < currentPlayerCount; i++) {
             const inp = document.getElementById(`score_${i}`);
             if (inp) inp.value = 0;
@@ -340,11 +353,11 @@
         const snap = await roomRef.once('value');
         const data = snap.val();
         if (!data || !data.scores) {
-            totalPanel.innerText = `⚖️ 暂无分数数据`;
+            totalPanel.innerText = `📊 总分 = 0`;
             return;
         }
         const total = data.scores.reduce((a, b) => a + b, 0);
-        totalPanel.innerText = `📊 当前总分 = ${total}`;
+        totalPanel.innerText = `📊 总分 = ${total}`;
     }
 
     function setupRealtimeListener() {
