@@ -1,171 +1,146 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>记分板-简单版</title>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <style>
-        body { font-family: Arial; padding: 20px; max-width: 800px; margin: 0 auto; }
-        input { font-size: 20px; padding: 8px; width: 150px; text-align: center; }
-        .player { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
-        .total { font-size: 24px; font-weight: bold; margin: 20px 0; }
-        button { padding: 8px 16px; font-size: 16px; margin: 5px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>长春麻将计算器</title>
+  <style>
+    :root { --bg:#f5f7fb; --card:#fff; --text:#18202a; --muted:#6b7280; --accent:#1677ff; --line:#e5e7eb; --danger:#d92d20; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    .wrap { max-width:960px; margin:0 auto; padding:24px 16px 40px; }
+    h1 { margin:0 0 6px; font-size:30px; }
+    .sub { color:var(--muted); margin-bottom:22px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 4px 18px rgba(0,0,0,.04); }
+    .full { grid-column:1/-1; }
+    .title { font-weight:700; margin-bottom:12px; }
+    .options { display:flex; flex-wrap:wrap; gap:10px; }
+    button.opt { border:1px solid var(--line); background:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; font-size:15px; }
+    button.opt.active { color:#fff; background:var(--accent); border-color:var(--accent); }
+    .hint { color:var(--muted); font-size:13px; margin-top:10px; line-height:1.5; }
+    .result { background:#101828; color:#fff; border-radius:18px; padding:20px; }
+    .result-main { display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .amount { font-size:38px; font-weight:800; }
+    .pattern { font-size:18px; color:#d0d5dd; }
+    .players { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:16px; }
+    .pay { background:rgba(255,255,255,.08); border-radius:12px; padding:14px; }
+    .pay .name { color:#d0d5dd; font-size:13px; }
+    .pay .num { margin-top:5px; font-size:24px; font-weight:800; }
+    .pos { color:#4ade80; } .neg { color:#ff6b6b; }
+    .footer { color:var(--muted); font-size:12px; margin-top:12px; line-height:1.5; }
+    @media (max-width:720px) { .grid{grid-template-columns:1fr;} .players{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  </style>
 </head>
 <body>
-    <h1>🎲 对冲记分板</h1>
-    
-    <div>
-        房间号: <input type="text" id="roomId" value="test">
-        <button onclick="switchRoom()">切换房间</button>
-        <span id="roomShow"></span>
+<div class="wrap">
+  <h1>🀄 长春麻将计算器</h1>
+  <div class="sub">只算胡牌基础分：屁胡、夹胡、漂胡、七对漂顶、豪华七对、双豪华七对。暂不计算蛋、杠、宝等额外项目。</div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="title">1. 胡牌者</div>
+      <div class="options" id="winnerType"></div>
     </div>
-    
-    <div>
-        <button onclick="changeCount(-1)">-人数</button>
-        <span id="countShow">4</span> 人
-        <button onclick="changeCount(1)">+人数</button>
-        <button onclick="resetAll()">全部归零</button>
+    <div class="card">
+      <div class="title">2. 胡牌方式</div>
+      <div class="options" id="winMethod"></div>
+      <div class="hint">点炮时再区分：闲点闲、庄点闲、闲点庄。</div>
     </div>
-    
-    <div id="players"></div>
-    <div class="total" id="total">总分: 0</div>
-    <p>✨ 直接输入数字，负数先输减号，按回车保存</p>
+    <div class="card" id="pointCard">
+      <div class="title">3. 点炮关系</div>
+      <div class="options" id="pointType"></div>
+    </div>
+    <div class="card">
+      <div class="title">4. 状态</div>
+      <div class="options" id="doorType"></div>
+      <div class="hint">站立按你前面确认的规则，在基础结果上 ×2；开门不加这一番。</div>
+    </div>
+    <div class="card full">
+      <div class="title">5. 胡型</div>
+      <div class="options" id="patternType"></div>
+    </div>
+
+    <div class="card full result">
+      <div class="result-main">
+        <div>
+          <div class="pattern" id="resultTitle"></div>
+          <div class="amount" id="winnerAmount">+8</div>
+        </div>
+        <div class="pattern" id="splitText">422</div>
+      </div>
+      <div class="players" id="players"></div>
+      <div class="footer">顺序说明：结果区会明确写出四个人的最终输赢，避免现场心算。</div>
+    </div>
+  </div>
+</div>
 
 <script>
-    const config = {
-        apiKey: "AIzaSyBsAn4E14FKJutkd_b7R4R0uoiLt5dKrQo",
-        authDomain: "now-time-637c1.firebaseapp.com",
-        databaseURL: "https://now-time-637c1-default-rtdb.firebaseio.com",
-        projectId: "now-time-637c1",
-        storageBucket: "now-time-637c1.firebasestorage.app",
-        messagingSenderId: "563371293042",
-        appId: "1:563371293042:web:c963ab777aad8a9cd145eb"
-    };
-    firebase.initializeApp(config);
-    const db = firebase.database();
+const PATTERNS = [
+  ['屁胡',1], ['夹胡',2], ['漂胡',4], ['七对漂顶',8], ['豪华七对',16], ['双豪华七对',32]
+];
+const state = { winner:'闲家', method:'自摸', point:'闲点闲', door:'开门', pattern:'屁胡' };
 
-    let room = "test";
-    let count = 4;
-    let syncing = false;
+function renderOptions(id, items, key) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  items.forEach(([label,val]) => {
+    const b = document.createElement('button');
+    b.className = 'opt' + (state[key]===val ? ' active' : '');
+    b.textContent = label;
+    b.onclick = () => { state[key]=val; renderAll(); };
+    el.appendChild(b);
+  });
+}
 
-    function getRef() { return db.ref(`simple/${room}`); }
+function calc() {
+  // 以你提供的图片作为母表：屁胡为 4/5/6/8 三组基础价格。
+  // 自摸：闲自摸=422，庄自摸=444；点炮：闲点闲=221，庄点闲=411，闲点庄=422。
+  // 每提升一个胡型档位 ×2；站立再 ×2。
+  const mult = PATTERNS.find(x=>x[0]===state.pattern)[1];
+  let base;
+  let label;
+  if (state.method==='自摸') {
+    if (state.winner==='庄家') { base=[4,4,4]; label='庄自摸'; }
+    else { base=[4,2,2]; label='闲自摸'; }
+  } else {
+    if (state.point==='闲点闲') { base=[2,2,1]; label='闲点闲'; }
+    else if (state.point==='庄点闲') { base=[4,1,1]; label='庄点闲'; }
+    else { base=[4,2,2]; label='闲点庄'; }
+  }
+  let vals=base.map(x=>x*mult);
+  if (state.door==='站立') vals=vals.map(x=>x*2);
+  // vals 表示三家支付额。胡牌者获得三家之和。
+  const winnerGain=vals.reduce((a,b)=>a+b,0);
+  let players;
+  if (state.method==='自摸') {
+    const payerNames = state.winner==='庄家' ? ['闲家A','闲家B','闲家C'] : ['庄家','闲家A','闲家B'];
+    players=[['胡牌者',winnerGain], [payerNames[0],-vals[0]], [payerNames[1],-vals[1]], [payerNames[2],-vals[2]]];
+  } else {
+    // 点炮时，根据关系把三家支付分别映射到庄/闲。
+    if (state.point==='闲点闲') players=[['胡牌者',winnerGain],['点炮闲家',-vals[0]],['庄家',-vals[1]],['另一闲家',-vals[2]]];
+    else if (state.point==='庄点闲') players=[['胡牌者',winnerGain],['庄家(点炮)',-vals[0]],['闲家A',-vals[1]],['闲家B',-vals[2]]];
+    else players=[['胡牌者',winnerGain],['庄家',-vals[1]],['闲家A(点炮)',-vals[0]],['闲家B',-vals[2]]];
+  }
+  return {winnerGain, vals, label, players};
+}
 
-    async function save(scores) {
-        syncing = true;
-        await getRef().set({ count: count, scores: scores });
-        syncing = false;
-    }
+function renderAll(){
+  renderOptions('winnerType',[['闲家','闲家'],['庄家','庄家']], 'winner');
+  renderOptions('winMethod',[['自摸','自摸'],['点炮','点炮']], 'method');
+  renderOptions('pointType',[['闲点闲','闲点闲'],['庄点闲','庄点闲'],['闲点庄','闲点庄']], 'point');
+  renderOptions('doorType',[['开门','开门'],['站立','站立']], 'door');
+  renderOptions('patternType',PATTERNS,'pattern');
+  document.getElementById('pointCard').style.display=state.method==='点炮' ? 'block' : 'none';
 
-    async function load() {
-        const snap = await getRef().once('value');
-        const data = snap.val();
-        if (data) {
-            if (data.count) count = data.count;
-            document.getElementById('countShow').innerText = count;
-            if (data.scores && data.scores.length === count) {
-                render(data.scores);
-            } else {
-                const scores = Array(count).fill(0);
-                render(scores);
-                save(scores);
-            }
-        } else {
-            const scores = Array(count).fill(0);
-            render(scores);
-            save(scores);
-        }
-    }
-
-    function render(scores) {
-        const div = document.getElementById('players');
-        div.innerHTML = '';
-        for (let i = 0; i < scores.length; i++) {
-            div.innerHTML += `
-                <div class="player">
-                    玩家${i+1}: 
-                    <input type="number" id="inp_${i}" value="${scores[i]}" step="1" 
-                           onchange="update(${i}, this.value)">
-                </div>
-            `;
-        }
-        const total = scores.reduce((a,b)=>a+b,0);
-        document.getElementById('total').innerText = '总分: ' + total;
-    }
-
-    window.update = async function(idx, val) {
-        if (syncing) return;
-        let num = parseFloat(val);
-        if (isNaN(num)) num = 0;
-        const snap = await getRef().child('scores').once('value');
-        let scores = snap.val() || Array(count).fill(0);
-        scores[idx] = num;
-        await save(scores);
-        render(scores);
-    }
-
-    window.resetAll = async function() {
-        const scores = Array(count).fill(0);
-        await save(scores);
-        render(scores);
-    }
-
-    window.changeCount = async function(delta) {
-        let newCount = count + delta;
-        if (newCount < 2) newCount = 2;
-        if (newCount > 8) newCount = 8;
-        if (newCount === count) return;
-        
-        const snap = await getRef().child('scores').once('value');
-        let old = snap.val() || [];
-        let newScores;
-        if (newCount > old.length) {
-            newScores = [...old];
-            while (newScores.length < newCount) newScores.push(0);
-        } else {
-            newScores = old.slice(0, newCount);
-        }
-        count = newCount;
-        document.getElementById('countShow').innerText = count;
-        await getRef().set({ count: count, scores: newScores });
-        render(newScores);
-    }
-
-    window.switchRoom = async function() {
-        let newRoom = document.getElementById('roomId').value.trim();
-        if (!newRoom) return;
-        room = newRoom;
-        document.getElementById('roomShow').innerText = room;
-        window.history.replaceState({}, "", `?room=${room}`);
-        await load();
-        // 重新绑定监听
-        getRef().off();
-        getRef().on('value', (snap) => {
-            if (syncing) return;
-            const data = snap.val();
-            if (data && data.scores && data.scores.length === count) {
-                render(data.scores);
-            }
-        });
-    }
-
-    const urlRoom = new URLSearchParams(window.location.search).get('room');
-    if (urlRoom) {
-        room = urlRoom;
-        document.getElementById('roomId').value = room;
-    }
-    document.getElementById('roomShow').innerText = room;
-    load().then(() => {
-        getRef().on('value', (snap) => {
-            if (syncing) return;
-            const data = snap.val();
-            if (data && data.scores && data.scores.length === count) {
-                render(data.scores);
-            }
-        });
-    });
+  // 仅在“谁胡”与“点炮关系”冲突时给出清晰提示，不强制修改选择。
+  const r=calc();
+  document.getElementById('resultTitle').textContent=`${state.door} · ${state.pattern} · ${r.label}`;
+  document.getElementById('winnerAmount').textContent='+'+r.winnerGain;
+  document.getElementById('splitText').textContent=r.vals.join('-');
+  document.getElementById('players').innerHTML=r.players.map(([name,val])=>`<div class="pay"><div class="name">${name}</div><div class="num ${val>=0?'pos':'neg'}">${val>0?'+':''}${val}</div></div>`).join('');
+}
+renderAll();
 </script>
 </body>
 </html>
